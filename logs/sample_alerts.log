@@ -1,1 +1,25 @@
+# ============================================================
+# sample_alerts.log — Suricata fast.log output
+# Captured during simulated attack scenarios
+# Lab Date: 2025-07-01
+# ============================================================
 
+# --- Attack 1: Nmap SYN Scan ---
+07/01/2025-14:32:11.456789  [**] [1:1000001:1] NMAP SYN Scan Detected [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 192.168.56.102:54231 -> 192.168.56.101:80
+07/01/2025-14:32:11.457001  [**] [1:1000001:1] NMAP SYN Scan Detected [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 192.168.56.102:54232 -> 192.168.56.101:443
+07/01/2025-14:32:11.457234  [**] [1:1000001:1] NMAP SYN Scan Detected [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 192.168.56.102:54233 -> 192.168.56.101:22
+
+# --- Attack 2: ICMP Ping Sweep ---
+07/01/2025-14:33:02.112233  [**] [1:1000002:1] ICMP Ping Sweep Detected [**] [Classification: Attempted Information Leak] [Priority: 2] {ICMP} 192.168.56.102:0 -> 192.168.56.101:0
+07/01/2025-14:33:02.112500  [**] [1:1000002:1] ICMP Ping Sweep Detected [**] [Classification: Attempted Information Leak] [Priority: 2] {ICMP} 192.168.56.102:0 -> 192.168.56.100:0
+07/01/2025-14:33:02.112788  [**] [1:1000002:1] ICMP Ping Sweep Detected [**] [Classification: Attempted Information Leak] [Priority: 2] {ICMP} 192.168.56.102:0 -> 192.168.56.103:0
+
+# --- Attack 3: SSH Brute Force (Hydra) ---
+07/01/2025-14:34:45.123456  [**] [1:1000003:1] SSH Brute Force Attempt [**] [Classification: Attempted Administrator Privilege Gain] [Priority: 1] {TCP} 192.168.56.102:51001 -> 192.168.56.101:22
+07/01/2025-14:34:45.234567  [**] [1:1000003:1] SSH Brute Force Attempt [**] [Classification: Attempted Administrator Privilege Gain] [Priority: 1] {TCP} 192.168.56.102:51002 -> 192.168.56.101:22
+07/01/2025-14:34:45.345678  [**] [1:1000003:1] SSH Brute Force Attempt [**] [Classification: Attempted Administrator Privilege Gain] [Priority: 1] {TCP} 192.168.56.102:51003 -> 192.168.56.101:22
+07/01/2025-14:34:45.456789  [**] [1:1000003:1] SSH Brute Force Attempt [**] [Classification: Attempted Administrator Privilege Gain] [Priority: 1] {TCP} 192.168.56.102:51004 -> 192.168.56.101:22
+07/01/2025-14:34:45.567890  [**] [1:1000003:1] SSH Brute Force Attempt [**] [Classification: Attempted Administrator Privilege Gain] [Priority: 1] {TCP} 192.168.56.102:51005 -> 192.168.56.101:22
+
+# --- Attack 4: Reverse Shell via Netcat ---
+07/01/2025-14:36:10.987654  [**] [1:1000004:1] Possible Reverse Shell - Netcat /bin/sh Payload [**] [Classification: Executable Code was Detected] [Priority: 1] {TCP} 192.168.56.102:45678 -> 192.168.56.101:4444

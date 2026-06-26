@@ -1,1 +1,394 @@
+%YAML 1.1
+---
 
+# =============================================================
+# suricata.yaml — Suricata IDS Home Lab Configuration
+# Author: Your Name
+# Suricata Version: 8.0.5
+# Lab Environment: VirtualBox Host-Only Network
+# Defender IP: 192.168.56.101
+# =============================================================
+
+# =============================================================
+# STEP 1 — Define your network variables
+# HOME_NET = your defended network (the Ubuntu Server subnet)
+# EXTERNAL_NET = everything else (attacker VM or internet)
+# =============================================================
+
+vars:
+  address-groups:
+    HOME_NET: "[192.168.56.0/24]"
+    EXTERNAL_NET: "!$HOME_NET"
+
+    # Common server groups (adjust as needed)
+    HTTP_SERVERS: "$HOME_NET"
+    SMTP_SERVERS: "$HOME_NET"
+    SQL_SERVERS:  "$HOME_NET"
+    DNS_SERVERS:  "$HOME_NET"
+    TELNET_SERVERS: "$HOME_NET"
+    DNP3_SERVER:  "$HOME_NET"
+    DNP3_CLIENT:  "$HOME_NET"
+    MODBUS_CLIENT: "$HOME_NET"
+    MODBUS_SERVER: "$HOME_NET"
+    ENIP_CLIENT:  "$HOME_NET"
+    ENIP_SERVER:  "$HOME_NET"
+
+  port-groups:
+    HTTP_PORTS:   "80"
+    SHELLCODE_PORTS: "!80"
+    ORACLE_PORTS: 1521
+    SSH_PORTS:    22
+    DNP3_PORTS:   20000
+    MODBUS_PORTS: 502
+    FILE_DATA_PORTS: "[$HTTP_PORTS,110,143]"
+    FTP_PORTS:    21
+    VXLAN_PORT:   4789
+    TEREDO_PORTS: 3544
+
+# =============================================================
+# STEP 2 — Default settings (logging, stats, flow)
+# =============================================================
+
+default-log-dir: /var/log/suricata/
+
+stats:
+  enabled: yes
+  interval: 8
+
+# =============================================================
+# STEP 3 — Output formats
+# fast.log  → human-readable alerts (great for quick checking)
+# eve.json  → structured JSON log (best for analysis & SIEM)
+# =============================================================
+
+outputs:
+
+  # Human-readable alert log
+  - fast:
+      enabled: yes
+      filename: fast.log
+      append: yes
+
+  # Structured JSON event log (recommended for analysis)
+  - eve-log:
+      enabled: yes
+      filename: eve.json
+      filetype: regular
+      append: yes
+      types:
+        - alert:
+            payload: yes
+            payload-buffer-size: 4kb
+            payload-printable: yes
+            packet: yes
+            metadata: yes
+            http-body: yes
+            http-body-printable: yes
+            tagged-packets: yes
+        - anomaly:
+            enabled: yes
+            types:
+              decode: no
+              stream: no
+              applayer: yes
+        - http:
+            extended: yes
+        - dns:
+            query: yes
+            answer: yes
+        - tls:
+            extended: yes
+        - files:
+            force-magic: no
+        - smtp:
+            extended: yes
+        - dnp3
+        - ftp
+        - rdp
+        - nfs
+        - smb
+        - tftp
+        - ikev2
+        - krb5
+        - ntp
+        - dhcp:
+            enabled: yes
+            extended: yes
+        - ssh
+        - flow
+        - netflow
+
+  # Stats log
+  - stats:
+      enabled: yes
+      filename: stats.log
+      append: yes
+
+  # Syslog output (optional — enable if forwarding to SIEM)
+  - syslog:
+      enabled: no
+      facility: local5
+      format: "[%i] <%d> -- "
+
+# =============================================================
+# STEP 4 — Network interface
+# Change 'enp0s3' to match your actual interface name.
+# Run: ip a   to find your interface.
+# Common names: enp0s3 (VirtualBox), ens33 (VMware)
+# =============================================================
+
+af-packet:
+  - interface: enp0s3       # ← change this to your NIC name
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+    use-mmap: yes
+    tpacket-v3: yes
+
+# Fallback pcap capture (used if af-packet is unavailable)
+pcap:
+  - interface: enp0s3       # ← same as above
+
+# =============================================================
+# STEP 5 — Detection engine settings
+# =============================================================
+
+detect:
+  profile: medium
+  custom-values:
+    toclient-groups: 3
+    toserver-groups: 25
+  sgh-mpm-context: auto
+  inspection-recursion-limit: 3000
+  prefilter:
+    default: mpm
+  grouping:
+  profiling:
+    grouping:
+      dump-to-disk: false
+      include-rules: false
+      include-mpm-stats: false
+
+# =============================================================
+# STEP 6 — Rule files
+# Suricata loads rules in order.
+# custom.rules = your lab-specific detection rules
+# =============================================================
+
+default-rule-path: /var/lib/suricata/rules
+
+rule-files:
+  - suricata.rules
+  - /etc/suricata/rules/custom.rules    # ← your custom lab rules
+
+# =============================================================
+# STEP 7 — App layer protocol detection
+# =============================================================
+
+app-layer:
+  protocols:
+    rfb:
+      enabled: yes
+      detection-ports:
+        dp: 5900, 5901, 5902, 5903, 5904, 5905, 5906, 5907, 5908, 5909
+    mqtt:
+      enabled: yes
+    krb5:
+      enabled: yes
+    bittorrent-dht:
+      enabled: yes
+    snmp:
+      enabled: yes
+    tftp:
+      enabled: yes
+    rdp:
+      enabled: yes
+    dcerpc:
+      enabled: yes
+    ftp:
+      enabled: yes
+      memcap: 64mb
+    ssh:
+      enabled: yes
+      hassh: yes
+    http2:
+      enabled: yes
+    smtp:
+      enabled: yes
+      raw-extraction: no
+      mime:
+        decode-mime: yes
+        decode-base64: yes
+        decode-quoted-printable: yes
+        header-value-depth: 2000
+        extract-urls: yes
+        body-md5: no
+      inspected-tracker:
+        content-limit: 100000
+        content-inspect-min-size: 32768
+        content-inspect-window: 4096
+    imap:
+      enabled: detection-only
+    dns:
+      tcp:
+        enabled: yes
+        detection-ports:
+          dp: 53
+      udp:
+        enabled: yes
+        detection-ports:
+          dp: 53
+    http:
+      enabled: yes
+      libhtp:
+        default-config:
+          personality: IDS
+          request-body-limit: 100kb
+          response-body-limit: 100kb
+          request-body-minimal-inspect-size: 32kb
+          request-body-inspect-window: 4kb
+          response-body-minimal-inspect-size: 40kb
+          response-body-inspect-window: 16kb
+          response-body-decompress-layer-limit: 2
+          http-body-inline: auto
+          swf-decompression:
+            enabled: yes
+            type: both
+            compress-depth: 0
+            decompress-depth: 0
+          double-decode-path: no
+          double-decode-query: no
+    tls:
+      enabled: yes
+      detection-ports:
+        dp: 443
+      ja3-fingerprints: auto
+    modbus:
+      enabled: no
+      detection-ports:
+        dp: 502
+      stream-depth: 0
+    dnp3:
+      enabled: no
+      detection-ports:
+        dp: 20000
+    enip:
+      enabled: no
+      detection-ports:
+        dp: 44818
+        sp: 44818
+    nfs:
+      enabled: yes
+    ikev2:
+      enabled: yes
+    smb:
+      enabled: yes
+      detection-ports:
+        dp: [139, 445]
+    krb5:
+      enabled: yes
+    ntp:
+      enabled: yes
+    dhcp:
+      enabled: yes
+    sip:
+      enabled: no
+
+# =============================================================
+# STEP 8 — Flow and stream settings
+# =============================================================
+
+flow:
+  memcap: 128mb
+  hash-size: 65536
+  prealloc: 10000
+  emergency-recovery: 30
+
+vlan:
+  use-for-tracking: true
+
+flow-timeouts:
+  default:
+    new: 30
+    established: 300
+    closed: 0
+    bypassed: 100
+    emergency-new: 10
+    emergency-established: 100
+    emergency-closed: 0
+    emergency-bypassed: 50
+  tcp:
+    new: 60
+    established: 600
+    closed: 60
+    bypassed: 100
+    emergency-new: 5
+    emergency-established: 100
+    emergency-closed: 10
+    emergency-bypassed: 50
+  udp:
+    new: 30
+    established: 300
+    bypassed: 100
+    emergency-new: 10
+    emergency-established: 100
+    emergency-bypassed: 50
+  icmp:
+    new: 30
+    established: 300
+    bypassed: 100
+    emergency-new: 10
+    emergency-established: 100
+    emergency-bypassed: 50
+
+stream:
+  memcap: 64mb
+  checksum-validation: yes
+  inline: auto
+  reassembly:
+    memcap: 256mb
+    depth: 1mb
+    toserver-chunk-size: 2560
+    toclient-chunk-size: 2560
+    randomize-chunk-size: yes
+
+# =============================================================
+# STEP 9 — Logging and misc
+# =============================================================
+
+logging:
+  default-log-level: notice
+  default-output-filter:
+  outputs:
+  - console:
+      enabled: yes
+  - file:
+      enabled: yes
+      level: info
+      filename: /var/log/suricata/suricata.log
+  - syslog:
+      enabled: no
+      facility: local5
+
+legacy:
+  uricontent: enabled
+
+engine-analysis:
+  rules-fast-pattern: yes
+  rules: yes
+
+pcre:
+  match-limit: 3500
+  match-limit-recursion: 1500
+
+host-mode: auto
+
+unix-command:
+  enabled: auto
+
+coredump:
+  max-dump: unlimited
+
+# =============================================================
+# END OF CONFIG
+# =============================================================
